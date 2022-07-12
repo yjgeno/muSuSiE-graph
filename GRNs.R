@@ -26,7 +26,7 @@ out <- joint_graph_fun_two(dta_1, dta_2,
                            sigma2_int = NULL, 
                            prior_vec = NULL, #
                            itermax = 100, 
-                           L_max = as.numeric(args[6]), #
+                           L_max = 10,#as.numeric(args[6]), #
                            tol = 1e-4, 
                            sigma0_low_bd = 1e-8,
                            residual_variance_lowerbound = NULL)

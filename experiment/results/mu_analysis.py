@@ -6,10 +6,10 @@ warnings.filterwarnings("ignore")
 
 
 # load R results
-def load_data():
-    net_1 = np.loadtxt(Path(__file__).parent / "coeff_1.txt", delimiter=",", dtype=float)
-    net_2 = np.loadtxt(Path(__file__).parent / "coeff_2.txt", delimiter=",", dtype=float)
-    return net_1, net_2
+def load_data(paths: list):
+    if not isinstance(paths, list):
+        raise TypeError("input a list of .txt file paths")
+    return [np.loadtxt(Path(__file__).parent / path, delimiter=",", dtype=float) for path in paths]
 
 
 def get_dropout(net: np.ndarray):
@@ -43,7 +43,7 @@ def net_mapping(net:np.ndarray, # weighted adj
                 mask=None):
     idx = (net_ref["pair_idx"]).tolist()
     net_res = np.array([1 if net[i]>=0 else -1 for i in idx])
-    if mask is not None:
+    if mask is not None: # pos/neg
         acc = np.sum(net_ref["ref"][mask] == net_res[mask]) / len(net_ref[mask])
     else:
         acc = np.sum(net_ref["ref"] == net_res) / len(net_ref)
@@ -63,26 +63,42 @@ def adj_stacking(net: np.ndarray,
 
 if __name__ == '__main__':
     import argparse
-
+    import glob
     parser = argparse.ArgumentParser()
-    parser.add_argument('-L', '--L_max', type = int, default = 10)
-    parser.add_argument('--file', type = str, default = 'sum_filter')
+    parser.add_argument('-L', '--L_max', type = int, default = 10) # only for write
+    parser.add_argument('--file_out', type = str, default = 'sum_filter')
+    parser.add_argument('--file_in_dir', type = str, default = 'multi_coeff')
     args = parser.parse_args()
 
-    net_1, net_2 = load_data()
-    drop_1, drop_2 = get_dropout(net_1), get_dropout(net_2)
+    files = glob.glob(f"{args.file_in_dir}/*.txt")
+    nets = load_data(files)
+    drops = [get_dropout(net) for net in nets]
     net_ref, adj_ref = load_ref_data()
-    acc_1, acc_2 = net_mapping(net_1, net_ref), net_mapping(net_2, net_ref)
-    acc_1_adj, acc_2_adj = adj_stacking(net_1, adj_ref), adj_stacking(net_2, adj_ref)
+    # get accuracies on network
+    accs = [net_mapping(net, net_ref) for net in nets]
+    mask = net_ref["ref"] == 1
+    accs_pos = [net_mapping(net, net_ref, mask) for net in nets]
+    mask = net_ref["ref"] == -1
+    accs_neg = [net_mapping(net, net_ref, mask) for net in nets]
+    # accuracy on adj
+    accs_adj = [adj_stacking(net, adj_ref) for net in nets]
+
+    drop, acc, acc_pos, acc_neg, acc_adj = np.mean([drops, accs, accs_pos, accs_neg, accs_adj], axis=1)
     try:
-        f = open(Path(__file__).parent / f'{args.file}.txt', 'r')
+        f = open(Path(__file__).parent / f'{args.file_out}.txt', 'r')
     except IOError:
-        f = open(Path(__file__).parent / f'{args.file}.txt', 'w')
-        f.writelines("L_max\tdropout\tacc_network_only\tacc_adj\n")
+        f = open(Path(__file__).parent / f'{args.file_out}.txt', 'w')
+        f.writelines("L_max,dropout,acc_network,acc_network_pos,acc_network_neg,acc_adj\n")
     finally:  
-        f = open(Path(__file__).parent / f'{args.file}.txt', 'a')
-        f.writelines(f"{args.L_max}, ({drop_1:.2f}, {drop_2:.2f}),"
-                     f"({acc_1:.2f}, {acc_2:.2f}),"
-                     f"({acc_1_adj:.2f}, {acc_2_adj:.2f})\n")						
+        f = open(Path(__file__).parent / f'{args.file_out}.txt', 'a')
+        f.writelines(f"{args.L_max},"
+                     f"{drop:.2f},{acc:.2f},{acc_pos:.2f},{acc_neg:.2f},{acc_adj:.2f}\n")
+                    #  f"{drop_1:.2f},{drop_2:.2f},"
+                    #  f"{acc_1:.2f},{acc_2:.2f},"
+                    # dd f"{acc_pos_1:.2f},{acc_pos_2:.2f},"
+                    #  f"{acc_neg_1:.2f},{acc_neg_2:.2f},"
+                    #  f"{acc_adj_1:.2f},{acc_adj_2:.2f}\n")						
         f.close()
+
+    # python mu_analysis.py -L 10 --file_out sum_filter
         
