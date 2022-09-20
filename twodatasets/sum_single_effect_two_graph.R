@@ -13,7 +13,7 @@
 # residual_variance_lowerbound is the lower bound for sigma2
 
 source("twodatasets/utility_two.R")
-sum_single_effect_two <- function(X_1, Y_1, X_2, Y_2, scale_x = TRUE, intercept = TRUE,
+sum_single_effect_two <- function(X_1, Y_1, X_2, Y_2, scale_x = FALSE, intercept = TRUE,
                                   sigma02_int = NULL, sigma2_int = NULL, prior_vec = NULL,
                                   L = NULL, itermax = 100, tol = 1e-4, sigma0_low_bd = 1e-8,
                                   residual_variance_lowerbound = NULL) {
@@ -32,6 +32,7 @@ sum_single_effect_two <- function(X_1, Y_1, X_2, Y_2, scale_x = TRUE, intercept 
   ## data preprocess
   X_scale_1 <- scale(X_1, center = intercept, scale = scale_x)
   X_scale_2 <- scale(X_2, center = intercept, scale = scale_x)
+  if (sum(is.nan(X_scale_2)) > 0) X_scale_2[is.nan(X_scale_2)] <- 0
 
   if (intercept) {
     mean_Y_1 <- mean(Y_1)
@@ -52,6 +53,7 @@ sum_single_effect_two <- function(X_1, Y_1, X_2, Y_2, scale_x = TRUE, intercept 
   XtX_2 <- crossprod(X_scale_2)
   X_scale2_2 <- X_scale_2 * X_scale_2
   X2_2 <- colSums(X_scale2_2)
+  KO_index <- which(X2_2 == 0)
   XtY_2 <- crossprod(X_scale_2, Y_2)
 
   # Initialize prior
@@ -98,6 +100,7 @@ sum_single_effect_two <- function(X_1, Y_1, X_2, Y_2, scale_x = TRUE, intercept 
       b_hat_2 <- XtYtmp_2 / X2_2
       s2_2 <- sigma2 / X2_2
       z2_2 <- b_hat_2^2 / s2_2
+      b_hat_2[KO_index] <- s2_2[KO_index] <- z2_2[KO_index] <- 0
       # calculate sigma0
       lsigma02_int <- max(log(sigma02_vec[l]), -30)
       sigma02 <- sigma0_opt_two(lsigma02_int, prior_pi, z2_1, s2_1, z2_2, s2_2, b_hat_1, b_hat_2)
@@ -111,6 +114,7 @@ sum_single_effect_two <- function(X_1, Y_1, X_2, Y_2, scale_x = TRUE, intercept 
       tmp1_2 <- log(sqrt(s2_2 / (sigma02 + s2_2)))
       tmp2_2 <- z2_2 / 2 * sigma02 / (sigma02 + s2_2)
       lBF_2 <- tmp1_2 + tmp2_2
+      lBF_2[which(lBF_2 == - Inf)] <- 0
       # get bayesian factor
       lBF <- c(lBF_1, lBF_2, lBF_1 + lBF_2, 0)
       maxlBF <- max(lBF)
@@ -126,6 +130,7 @@ sum_single_effect_two <- function(X_1, Y_1, X_2, Y_2, scale_x = TRUE, intercept 
       # data set 2
       post_sigma2_2 <- 1 / (1 / s2_2 + 1 / sigma02)
       post_mu_2 <- post_sigma2_2 / s2_2 * b_hat_2
+      post_mu_2[KO_index] <- 0
       ## Calculate posterior mean
       # data set 1
       alpha_mat_1[, l] <- post_alpha[1:p] + post_alpha[(2 * p + 1):(3 * p)]

@@ -10,6 +10,7 @@ lBF_model_two <- function(lsigma02, prior_pi, z2_1, s2_1, z2_2, s2_2) {
   tmp1_2 <- log(sqrt(s2_2 / (sigma02 + s2_2)))
   tmp2_2 <- z2_2 / 2 * sigma02 / (sigma02 + s2_2)
   lBF_2 <- tmp1_2 + tmp2_2
+  lBF_2[which(lBF_2 == - Inf)] <- 0
   # combine
   lBF <- c(lBF_1, lBF_2, lBF_1 + lBF_2, 0)
   maxlBF <- max(lBF)

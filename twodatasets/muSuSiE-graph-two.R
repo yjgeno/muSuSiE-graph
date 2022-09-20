@@ -6,7 +6,7 @@
 # sigma2_int is initialization for error variance
 # prior_vec is prior for common part and for single part
 # itermax is the maximum iteration
-# L_max is the largest number of parents
+# L is the largest number of parents
 # tol is the threshold for ELBO
 # sigma0_low_bd is the threshold for select effect l
 # residual_variance_lowerbound is the lower bound for sigma2
@@ -15,7 +15,7 @@
 source("twodatasets/sum_single_effect_two_graph.R")
 joint_graph_fun_two <- function(dta_1, dta_2, scale_x = FALSE, intercept = TRUE,
                                 sigma02_int = NULL, sigma2_int = NULL, prior_vec = NULL,
-                                itermax = 100, L_max = 10, tol = 1e-4, sigma0_low_bd = 1e-8,
+                                itermax = 100, L = 10, tol = 1e-4, sigma0_low_bd = 1e-8,
                                 residual_variance_lowerbound = NULL) {
   ## Initialization
   p <- ncol(dta_1)
@@ -53,7 +53,7 @@ joint_graph_fun_two <- function(dta_1, dta_2, scale_x = FALSE, intercept = TRUE,
     res <- sum_single_effect_two(
       X_1 = X_1, Y_1 = Y_1, X_2 = X_2, Y_2 = Y_2,
       scale_x = scale_x, intercept = intercept, sigma02_int = sigma02_int,
-      sigma2_int = sigma2_int, prior_vec = prior_vec, L = min(iter_p, L_max),
+      sigma2_int = sigma2_int, prior_vec = prior_vec, L = L,
       itermax = itermax, tol = tol, sigma0_low_bd = sigma0_low_bd,
       residual_variance_lowerbound = residual_variance_lowerbound
     )
